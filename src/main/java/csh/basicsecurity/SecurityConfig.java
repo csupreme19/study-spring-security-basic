@@ -17,22 +17,19 @@ public class SecurityConfig {
         http.authorizeHttpRequests()
                 .anyRequest().authenticated();
 
-        http.formLogin()
-//                .loginPage("/loginPage")
-                .defaultSuccessUrl("/")
-                .failureUrl("/loginPage")
-                .usernameParameter("userId")
-                .passwordParameter("passwd")
-                .loginProcessingUrl("/login_proc")
-                .successHandler((req, res, auth) -> {
-                    log.info("authentication success={}", auth.getName());
-                    res.sendRedirect("/");
+        http.formLogin();
+
+        http.logout()
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login")
+                .addLogoutHandler((req, res, auth) -> {
+                    log.info("logout handler");
                 })
-                .failureHandler((req, res, exp) -> {
-                    log.info("authentication failed={}", exp.getMessage());
-                    res.sendRedirect("/loginPage");
+                .logoutSuccessHandler((req, res, auth) -> {
+                    res.sendRedirect("/login");
+                    log.info("logout success");
                 })
-                .permitAll()
+                .deleteCookies("remember-me")
         ;
 
         return http.build();
