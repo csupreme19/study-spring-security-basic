@@ -13,6 +13,9 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 
 @Slf4j
 @Configuration
@@ -46,12 +49,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests()
+                .requestMatchers("/login").permitAll()
                 .requestMatchers("/user").hasRole("USER")
                 .requestMatchers("/admin/pay").hasRole("ADMIN")
                 .requestMatchers("/admin/**").access(new WebExpressionAuthorizationManager("hasRole('ADMIN') or hasRole('SYS')"))
                 .anyRequest().authenticated();
 
-        http.formLogin();
+        http.formLogin()
+                .successHandler((req, res, auth) -> {
+                    RequestCache requestCache = new HttpSessionRequestCache();
+                    SavedRequest savedRequest = requestCache.getRequest(req, res);
+                    String redirectUrl = savedRequest.getRedirectUrl();
+                    res.sendRedirect(redirectUrl);
+                });
 
         http.logout()
                 .logoutUrl("/logout")
@@ -78,6 +88,10 @@ public class SecurityConfig {
                 .maximumSessions(1)
                 .maxSessionsPreventsLogin(false)
                 .expiredUrl("/login");
+
+        http.exceptionHandling()
+                .authenticationEntryPoint((req, res, auth) -> res.sendRedirect("/login"))
+                .accessDeniedHandler((req, res, auth) -> res.sendRedirect("/denied"));
 
         return http.build();
     }
